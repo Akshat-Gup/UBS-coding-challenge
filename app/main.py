@@ -51,26 +51,30 @@ async def evaluate_trading_formula(request: Request, payload: list = Body(..., e
         raise HTTPException(status_code=400, detail=str(exc))
   
 
-@app.post("/mst-calculation")
-async def mst_calculation_endpoint(request: Request, payload: dict):
-    # Enforce Content-Type: application/json for requests
-    content_type = request.headers.get("content-type", "")
-    if not content_type.startswith("application/json"):
-        raise HTTPException(status_code=415, detail="Content-Type must be application/json")
+# @app.post("/mst-calculation")
+# async def mst_calculation_endpoint(request: Request, payload: dict):
+#     # Enforce Content-Type: application/json for requests
+#     content_type = request.headers.get("content-type", "")
+#     if not content_type.startswith("application/json"):
+#         raise HTTPException(status_code=415, detail="Content-Type must be application/json")
 
-    try:
-        # Validate payload format
-        if not isinstance(payload, dict):
-            raise ValueError("Payload must be a list of objects with 'image' field")
+#     try:
+#         # Validate payload format
+#         if not isinstance(payload, dict):
+#             raise ValueError("Payload must be a list of objects with 'image' field")
         
-        for item in payload:
-            if not isinstance(item, dict) or "image" not in item:
-                raise ValueError("Each item must be a dictionary with an 'image' field containing base64 data")
+#         for item in payload:
+#             if not isinstance(item, dict) or "image" not in item:
+#                 raise ValueError("Each item must be a dictionary with an 'image' field containing base64 data")
         
-        result = mst_calculation(payload)
-        return JSONResponse(content=result)
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+#         result = mst_calculation(payload)
+#         return JSONResponse(content=result)
+#     except Exception as exc:
+#         raise HTTPException(status_code=400, detail=str(exc))
+
+
+
+
 # @app.post("/trading-formula")
 # async def evaluate_trading_formula(request: Request, payload: dict):
 #     # Enforce Content-Type: application/json for requests
