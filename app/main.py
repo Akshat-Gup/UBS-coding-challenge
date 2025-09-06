@@ -32,7 +32,7 @@ async def trivia():
 
 
 @app.post("/mst-calculation")
-async def mst_calculation_endpoint(request: Request, payload: list):
+async def mst_calculation_endpoint(request: Request, payload: dict):
     # Enforce Content-Type: application/json for requests
     content_type = request.headers.get("content-type", "")
     if not content_type.startswith("application/json"):
@@ -40,7 +40,7 @@ async def mst_calculation_endpoint(request: Request, payload: list):
 
     try:
         # Validate payload format
-        if not isinstance(payload, list):
+        if not isinstance(payload, dict):
             raise ValueError("Payload must be a list of objects with 'image' field")
         
         for item in payload:
