@@ -19,8 +19,8 @@ async def healthcheck():
         "status": "ok", 
         "message": "UBS challenge server running", 
         "version": "3.1",
-        "last_updated": "2024-01-16T10:30:00Z",
-        "investigate_fix": "Now accepts dict payload with networks key",
+        "last_updated": "2024-01-16T15:45:00Z",
+        "investigate_fix": "Fixed to accept both dict and list payload formats with Union type annotation",
         "endpoints": [
             "GET /",
             "GET /trivia", 
