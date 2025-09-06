@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Request, Body
 from fastapi.responses import JSONResponse
+from typing import Union
 
 # Import all endpoint functions
 from app.ticketing_agent import ticketing_agent
@@ -102,7 +103,7 @@ async def trading_formula_endpoint(request: Request, payload: list = Body(..., e
 
 
 @app.post("/investigate")
-async def investigate_endpoint(request: Request, payload=Body(...)):
+async def investigate_endpoint(request: Request, payload: Union[dict, list] = Body(...)):
     """Find extra channels in spy networks that can be safely removed"""
     # Enforce Content-Type: application/json for requests
     content_type = request.headers.get("content-type", "")
