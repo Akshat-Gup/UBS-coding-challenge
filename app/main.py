@@ -213,7 +213,6 @@ async def docs_redirect():
 
 
 
-
 @app.post("/princess-diaries")
 async def optimize_schedule_endpoint(request: Request, payload: dict = Body(..., embed=False)):
    """Merge bookings and compute minimum boats needed for schedules"""
