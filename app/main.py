@@ -10,6 +10,7 @@ from app.investigate import investigate
 from app.the_ink_archive import the_ink_archive
 from app.sailing_club import sailing_club
 from app.princess_diaries import calculate_optimized_schedule
+from app.princess_diaries import calculate_optimized_schedule
 from app.snakes_ladders import snakes_ladders_power_up
 from app.duolingo_sort import duolingo_sort
 # Create FastAPI app
@@ -33,15 +34,15 @@ async def healthcheck():
             "POST /blankety",
             "POST /trading-formula",
             "POST /investigate",
+            "POST /sailing-club",
+            "POST /sailing-club/submission",
             "GET /The-Ink-Archive",
-            "POST /The-Ink-Archive",
-            "POST /duolingo-sort"
+            "POST /The-Ink-Archive"
         ]
     }
 
-@app.post("/sailing-club")
-@app.post("/")
 @app.post("/sailing-club/submission")
+@app.post("/sailing-club")
 async def sailing_club_endpoint(request: Request, payload: dict = Body(..., embed=False)):
    """Merge bookings and compute minimum boats needed for schedules"""
    content_type = request.headers.get("content-type", "")

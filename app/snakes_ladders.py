@@ -80,10 +80,13 @@ def parse_svg_board(svg_content: str) -> Board:
             height_pixels = int(float(viewbox_parts[3]))
         else:
             # Fallback to width/height attributes
-            width_pixels = int(float(root.get('width', '128')))
-            height_pixels = int(float(root.get('height', '128')))
+            width_attr = root.get('width', '128')
+            height_attr = root.get('height', '128')
+            # Remove 'px' or other units if present
+            width_pixels = int(float(re.sub(r'[^0-9.]', '', width_attr)))
+            height_pixels = int(float(re.sub(r'[^0-9.]', '', height_attr)))
         
-        # Each square is 32 pixels, so calculate board dimensions
+        # Each square is 32 pixels according to specification
         board_width = width_pixels // 32
         board_height = height_pixels // 32
         
@@ -91,39 +94,55 @@ def parse_svg_board(svg_content: str) -> Board:
         ladders = []
         
         # Find all line elements representing snakes and ladders
-        # Look for line elements in the SVG
-        for line in root.iter():
-            if line.tag.endswith('line'):
-                x1 = float(line.get('x1', 0))
-                y1 = float(line.get('y1', 0))
-                x2 = float(line.get('x2', 0))
-                y2 = float(line.get('y2', 0))
-                stroke = line.get('stroke', '')
-                
-                # Convert pixel coordinates to square positions
-                # Board follows boustrophedon pattern (snake-like)
-                start_square = pixel_to_square(x1, y1, board_width, board_height)
-                end_square = pixel_to_square(x2, y2, board_width, board_height)
-                
-                # Determine if it's a snake or ladder based on color and direction
-                if stroke.upper() == 'RED' or 'red' in stroke.lower():
-                    # Red lines are snakes (go down)
-                    if start_square > end_square:
-                        snakes.append(Snake(start_square, end_square))
-                    else:
-                        snakes.append(Snake(end_square, start_square))
-                elif stroke.upper() == 'GREEN' or 'green' in stroke.lower():
-                    # Green lines are ladders (go up)  
-                    if start_square < end_square:
-                        ladders.append(Ladder(start_square, end_square))
-                    else:
-                        ladders.append(Ladder(end_square, start_square))
+        # Use a more comprehensive search including nested elements
+        for element in root.iter():
+            if element.tag.endswith('line'):
+                try:
+                    x1 = float(element.get('x1', 0))
+                    y1 = float(element.get('y1', 0))
+                    x2 = float(element.get('x2', 0))
+                    y2 = float(element.get('y2', 0))
+                    stroke = element.get('stroke', '').upper()
+                    
+                    # Skip very short lines (likely grid lines)
+                    line_length = ((x2-x1)**2 + (y2-y1)**2)**0.5
+                    if line_length < 20:  # Skip short lines
+                        continue
+                    
+                    # Convert pixel coordinates to square positions
+                    start_square = pixel_to_square(x1, y1, board_width, board_height)
+                    end_square = pixel_to_square(x2, y2, board_width, board_height)
+                    
+                    # Skip if squares are the same
+                    if start_square == end_square:
+                        continue
+                    
+                    # Determine if it's a snake or ladder based on color
+                    if 'RED' in stroke or stroke == '#FF0000' or stroke == '#F00':
+                        # Red lines are snakes (go down)
+                        if start_square > end_square:
+                            snakes.append(Snake(start_square, end_square))
+                        else:
+                            snakes.append(Snake(end_square, start_square))
+                    elif 'GREEN' in stroke or stroke == '#00FF00' or stroke == '#0F0':
+                        # Green lines are ladders (go up)  
+                        if start_square < end_square:
+                            ladders.append(Ladder(start_square, end_square))
+                        else:
+                            ladders.append(Ladder(end_square, start_square))
+                    
+                except (ValueError, TypeError):
+                    # Skip malformed line elements
+                    continue
+        
+        # Ensure reasonable board dimensions
+        if board_width < 2 or board_height < 2:
+            board_width, board_height = 4, 4
         
         return Board(board_width, board_height, snakes, ladders)
         
     except Exception as e:
-        # If parsing fails, create a simple 4x4 board for testing
-        print(f"SVG parsing failed: {e}. Using default 4x4 board.")
+        # If parsing fails, create a default board
         return Board(4, 4, [], [])
 
 
@@ -387,15 +406,146 @@ def snakes_ladders_power_up(payload: str) -> str:
     # Parse the board from SVG (with fallback)
     try:
         board = parse_svg_board(payload)
-    except:
+    except Exception as e:
+        # Log the error for debugging
+        print(f"SVG parsing error: {e}")
         # Default 4x4 board if parsing fails
         board = Board(4, 4, [], [])
     
-    # Create a simple winning sequence
-    dice_rolls = simple_winning_sequence(board)
+    # Log board information for debugging
+    print(f"Board: {board.width}x{board.height} = {board.total_squares} squares")
+    print(f"Snakes: {len(board.snakes)} | Ladders: {len(board.ladders)}")
+    if board.snakes:
+        print(f"Snake positions: {[(s.start, s.end) for s in board.snakes]}")
+    if board.ladders:
+        print(f"Ladder positions: {[(l.start, l.end) for l in board.ladders]}")
+    
+    # Try to find a winning sequence
+    dice_rolls = find_optimal_sequence(board)
+    
+    print(f"Generated sequence: {''.join(map(str, dice_rolls))}")
     
     # Generate output SVG
     return generate_svg_output(dice_rolls)
+
+
+def find_optimal_sequence(board: Board) -> List[int]:
+    """
+    Find an optimal sequence where player 2 wins using multiple strategies.
+    
+    Args:
+        board: Game board
+        
+    Returns:
+        Optimal dice roll sequence
+    """
+    # Try different approaches in order of preference
+    strategies = [
+        lambda: try_systematic_search(board),
+        lambda: try_pattern_based(board),
+        lambda: simple_winning_sequence(board)
+    ]
+    
+    for strategy in strategies:
+        try:
+            result = strategy()
+            if result and validate_sequence(result, board):
+                return result
+        except:
+            continue
+    
+    # Fallback to simple pattern
+    return simple_winning_sequence(board)
+
+
+def try_systematic_search(board: Board) -> List[int]:
+    """
+    Try a systematic search for winning sequences.
+    """
+    # For complex boards, try various combinations
+    patterns = [
+        [1, 6] * min(12, board.total_squares // 2),
+        [2, 6] * min(10, board.total_squares // 3), 
+        [1, 5, 2, 6] * min(8, board.total_squares // 4),
+        [3, 6, 1, 6, 2, 6] * min(6, board.total_squares // 6)
+    ]
+    
+    for pattern in patterns:
+        if validate_sequence(pattern, board):
+            return pattern
+    
+    return None
+
+
+def try_pattern_based(board: Board) -> List[int]:
+    """
+    Try pattern-based approach based on board characteristics.
+    """
+    # Analyze board characteristics
+    snake_count = len(board.snakes)
+    ladder_count = len(board.ladders)
+    
+    # Adjust strategy based on snakes and ladders
+    if snake_count > ladder_count:
+        # More snakes - be more cautious
+        return [1, 4, 2, 5, 1, 6] * min(8, board.total_squares // 6)
+    elif ladder_count > snake_count:
+        # More ladders - be more aggressive
+        return [2, 6, 1, 6, 3, 6] * min(8, board.total_squares // 6)
+    else:
+        # Balanced - use standard approach
+        return [1, 6, 2, 6] * min(10, board.total_squares // 4)
+
+
+def validate_sequence(dice_rolls: List[int], board: Board) -> bool:
+    """
+    Validate that a sequence results in player 2 winning.
+    
+    Args:
+        dice_rolls: Sequence to validate
+        board: Game board
+        
+    Returns:
+        True if player 2 wins with this sequence
+    """
+    try:
+        player1 = Player(0, "regular")
+        player2 = Player(0, "regular")
+        players = [player1, player2]
+        current_player_index = 0
+        
+        for roll in dice_rolls:
+            current_player = players[current_player_index]
+            
+            # Move player
+            new_position = current_player.position + roll
+            
+            # Handle overshooting
+            if new_position > board.total_squares:
+                overshoot = new_position - board.total_squares
+                new_position = board.total_squares - overshoot
+            
+            current_player.position = max(0, new_position)
+            
+            # Apply snakes and ladders
+            current_player.position = apply_snakes_and_ladders(current_player.position, board)
+            
+            # Handle die type changes
+            if current_player.die_type == "regular" and roll == 6:
+                current_player.die_type = "power_of_two"
+            elif current_player.die_type == "power_of_two" and roll == 2:
+                current_player.die_type = "regular"
+            
+            # Check for win
+            if current_player.position >= board.total_squares:
+                return current_player_index == 1  # Player 2 wins
+            
+            # Switch players
+            current_player_index = (current_player_index + 1) % 2
+        
+        return False
+    except:
+        return False
 
 
 def simple_winning_sequence(board: Board) -> List[int]:
