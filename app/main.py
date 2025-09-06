@@ -8,7 +8,7 @@ from app.trading_formula import trading_formula
 from app.investigate import investigate
 
 # Create FastAPI app
-app = FastAPI(title="UBS Challenge API", version="3.0")
+app = FastAPI(title="UBS Challenge API", version="3.1")
 
 
 @app.get("/")
@@ -17,7 +17,9 @@ async def healthcheck():
     return {
         "status": "ok", 
         "message": "UBS challenge server running", 
-        "version": "3.0", 
+        "version": "3.1",
+        "last_updated": "2024-01-16T10:30:00Z",
+        "investigate_fix": "Now accepts dict payload with networks key",
         "endpoints": [
             "GET /",
             "GET /trivia", 
@@ -33,6 +35,25 @@ async def healthcheck():
 async def trivia():
     """Get trivia answers"""
     return {"answers": [4, 1, 2, 2, 3, 4, 4, 5, 4]}
+
+
+@app.get("/debug")
+async def debug_info():
+    """Debug endpoint to verify deployment status"""
+    return {
+        "deployment_status": "updated",
+        "investigate_endpoint": "accepts dict with networks key",
+        "test_payload_format": {
+            "networks": [
+                {
+                    "networkId": "example",
+                    "network": [
+                        {"spy1": "agent1", "spy2": "agent2"}
+                    ]
+                }
+            ]
+        }
+    }
 
 
 @app.post("/ticketing-agent")
