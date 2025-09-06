@@ -2,10 +2,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from app.ticketing_agent import ticketing_agent
-# Temporarily comment out problematic imports for debugging
-# from app.mst_calculation import mst_calculation
-# from app.blankety import blankety_blanks
-# from app.trading_formula import trading_formula
+from app.blankety_simple import blankety_blanks_simple
 
 
 app = FastAPI(title="UBS Challenge API")
@@ -79,7 +76,7 @@ async def blankety_endpoint(request: Request, payload: dict):
         raise HTTPException(status_code=415, detail="Content-Type must be application/json")
 
     try:
-        # Simple test response for debugging
-        return JSONResponse(content={"message": "blankety endpoint is working", "payload_received": payload})
+        result = blankety_blanks_simple(payload)
+        return JSONResponse(content=result)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
