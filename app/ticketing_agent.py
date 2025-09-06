@@ -2,8 +2,13 @@ from typing import Dict, Any
 
 import json
 import math
-# import ticketingtest as example_request
-with open('ticketingtest.json', 'r') as f:
+import os
+
+# Get the directory where this script is located
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Load the test data from the same directory
+with open(os.path.join(script_dir, 'ticketingtest.json'), 'r') as f:
     example_request = json.load(f)
 
 def calculate_distance(point1, point2):
@@ -66,14 +71,16 @@ def find_best_concert_for_customer(customer, concerts, priority_map):
     return best_concert
 
 def ticketing_agent(payload: Dict[str, Any]) -> Dict[str, str]:
-    """
-    Main function to solve the ticketing agent problem.
-    
-    Args:
-        data: Dictionary containing customers, concerts, and priority mappings
-        
-    Returns:
-        Dictionary mapping customer names to their best concert names
+    """Compute best concert for each customer.
+
+    Expected payload structure:
+    {
+      "customers": [...],
+      "concerts": [...],
+      "priority": {...}
+    }
+
+    Returns mapping: {customer_name: concert_name}
     """
     customers = payload.get('customers', [])
     concerts = payload.get('concerts', [])
@@ -161,13 +168,69 @@ def performance_test():
     
     return execution_time < 10
 
+def run_manual(json_input=None):
+    """
+    Run ticketing agent manually with JSON input.
+    
+    Args:
+        json_input: JSON string, file path, or dictionary. If None, prompts for input.
+        
+    Returns:
+        Dictionary mapping customer names to concert names
+    """
+    if json_input is None:
+        print("Enter JSON payload (or 'quit' to exit):")
+        json_input = input().strip()
+        if json_input.lower() == 'quit':
+            return None
+    
+    try:
+        # Check if input is a file path
+        if isinstance(json_input, str) and json_input.endswith('.json'):
+            with open(json_input, 'r') as f:
+                data = json.load(f)
+        elif isinstance(json_input, str):
+            data = json.loads(json_input)
+        else:
+            data = json_input
+            
+        result = ticketing_agent(data)
+        return result
+        
+    except FileNotFoundError:
+        print(f"Error: File '{json_input}' not found.")
+        return None
+    except json.JSONDecodeError as e:
+        print(f"Error: Invalid JSON - {e}")
+        return None
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
+
 # Example usage and testing
 if __name__ == "__main__":
-    # Test with the provided example
-    # Process the example
-    result = process_request(example_request)
-    print("Example Result:")
-    print(result)
+    import sys
+    
+    if len(sys.argv) > 1 and sys.argv[1] == "--manual":
+        # Manual mode: accept JSON input
+        print("=== Manual Mode ===")
+        if len(sys.argv) > 2:
+            # JSON file path provided as argument
+            result = run_manual(sys.argv[2])
+        else:
+            # Interactive input
+            result = run_manual()
+        
+        if result is not None:
+            print("\nResult:")
+            print(json.dumps(result, indent=2))
+    
+    else:
+        # Test with the provided example
+        print("=== Test Mode ===")
+        result = process_request(example_request)
+        print("Example Result:")
+        print(result)
     
     # Let's manually verify the calculation for the example:
     print("\nManual verification:")
