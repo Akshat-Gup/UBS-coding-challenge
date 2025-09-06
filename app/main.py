@@ -27,6 +27,5 @@ async def assign(request: Request, payload: dict):
 
 @app.get("/trivia")
 async def trivia():
-    return {"answers": [1, 2, 3, 4]}
-
+    return {"answers": [4,1,2,2,3,4,1,4,1]}
 
