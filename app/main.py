@@ -81,7 +81,7 @@ async def trading_formula_endpoint(request: Request, payload: list = Body(..., e
 
 
 @app.post("/investigate")
-async def investigate_endpoint(request: Request, payload: list = Body(..., embed=False)):
+async def investigate_endpoint(request: Request, payload: dict):
     """Find extra channels in spy networks that can be safely removed"""
     # Enforce Content-Type: application/json for requests
     content_type = request.headers.get("content-type", "")
@@ -89,9 +89,20 @@ async def investigate_endpoint(request: Request, payload: list = Body(..., embed
         raise HTTPException(status_code=415, detail="Content-Type must be application/json")
 
     try:
-        # Wrap the list payload in the expected format
-        formatted_payload = {"networks": payload}
-        result = investigate(formatted_payload)
+        # Handle both formats: {"networks": [...]} or direct list
+        if isinstance(payload, dict) and "networks" in payload:
+            # Already in the correct format
+            result = investigate(payload)
+        elif isinstance(payload, list):
+            # Wrap list in the expected format
+            formatted_payload = {"networks": payload}
+            result = investigate(formatted_payload)
+        else:
+            # Handle the case where payload is a dict but doesn't have "networks" key
+            # Assume the dict contains the network data directly
+            formatted_payload = {"networks": [payload]}
+            result = investigate(formatted_payload)
+        
         return JSONResponse(content=result)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
