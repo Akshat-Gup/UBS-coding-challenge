@@ -10,7 +10,12 @@ app = FastAPI(title="UBS Challenge API")
 
 @app.get("/")
 async def healthcheck():
-    return {"status": "ok", "message": "UBS challenge server running", "version": "1.1"}
+    return {"status": "ok", "message": "UBS challenge server running", "version": "2.0", "timestamp": "2024-01-15"}
+
+
+@app.get("/test")
+async def test_endpoint():
+    return {"message": "This is a test endpoint to verify deployment", "working": True}
 
 
 @app.post("/ticketing-agent")
