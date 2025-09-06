@@ -474,33 +474,43 @@ def test_ink_archive():
         }
     ]
     
+    # Let's manually verify the exact expected calculation first
+    print("Manual calculation verification:")
+    print("Expected path: Kelp Silk -> Amberback Shells -> Ventspice -> Kelp Silk")
+    print("Goods mapping: Blue Moss(0), Amberback Shells(1), Kelp Silk(2), Ventspice(3)")
+    print("Path indices: 2 -> 1 -> 3 -> 2")
+    
+    # Extract the rates we need
+    ratios = test_data[0]["ratios"]
+    rate_2_to_1 = None  # Kelp Silk to Amberback Shells
+    rate_1_to_3 = None  # Amberback Shells to Ventspice  
+    rate_3_to_2 = None  # Ventspice to Kelp Silk
+    
+    for ratio in ratios:
+        if ratio[0] == 2.0 and ratio[1] == 1.0:
+            rate_2_to_1 = ratio[2]
+        elif ratio[0] == 1.0 and ratio[1] == 3.0:
+            rate_1_to_3 = ratio[2]
+        elif ratio[0] == 3.0 and ratio[1] == 2.0:
+            rate_3_to_2 = ratio[2]
+    
+    print(f"Rate 2->1 (Kelp Silk -> Amberback Shells): {rate_2_to_1}")
+    print(f"Rate 1->3 (Amberback Shells -> Ventspice): {rate_1_to_3}")
+    print(f"Rate 3->2 (Ventspice -> Kelp Silk): {rate_3_to_2}")
+    
+    if all(rate is not None for rate in [rate_2_to_1, rate_1_to_3, rate_3_to_2]):
+        total_multiplier = rate_2_to_1 * rate_1_to_3 * rate_3_to_2
+        gain = (total_multiplier - 1.0) * 100
+        print(f"Total multiplier: {rate_2_to_1} * {rate_1_to_3} * {rate_3_to_2} = {total_multiplier}")
+        print(f"Expected gain: ({total_multiplier} - 1.0) * 100 = {gain}")
+        print(f"Expected gain (exact): {7.249999999999934}")
+    
+    print("\n" + "="*50 + "\n")
+    
     result = the_ink_archive(test_data)
-    print("Fixed algorithm result:")
+    print("Algorithm result:")
     import json
     print(json.dumps(result, indent=2))
-    
-    # Manual verification of expected paths:
-    print("\nManual verification of expected paths:")
-    
-    # First challenge: Expected path: Kelp Silk -> Amberback Shells -> Ventspice -> Kelp Silk
-    # Goods indices: Blue Moss(0), Amberback Shells(1), Kelp Silk(2), Ventspice(3)
-    # Path: 2 -> 1 -> 3 -> 2
-    # Rates: 2->1 (0.0075), 1->3 (0.000055), 3->2 (2600000.0)
-    # Calculation: 0.0075 * 0.000055 * 2600000.0 = 1.07250
-    # Gain: (1.07250 - 1.0) * 100 = 7.25%
-    print("Expected path 1: Kelp Silk -> Amberback Shells -> Ventspice -> Kelp Silk")
-    print(f"Calculation: 0.0075 * 0.000055 * 2600000.0 = {0.0075 * 0.000055 * 2600000.0}")
-    print(f"Expected gain 1: {(0.0075 * 0.000055 * 2600000.0 - 1.0) * 100}")
-    
-    # Second challenge: Expected path: Drift Kelp -> Sponge Flesh -> Saltbeads -> Drift Kelp  
-    # Goods indices: Drift Kelp(0), Sponge Flesh(1), Saltbeads(2)
-    # Path: 0 -> 1 -> 2 -> 0
-    # Rates: 0->1 (0.9), 1->2 (1.1), 2->0 (1.2)
-    # Calculation: 0.9 * 1.1 * 1.2 = 1.188
-    # Gain: (1.188 - 1.0) * 100 = 18.8%
-    print("Expected path 2: Drift Kelp -> Sponge Flesh -> Saltbeads -> Drift Kelp")
-    print(f"Calculation: 0.9 * 1.1 * 1.2 = {0.9 * 1.1 * 1.2}")
-    print(f"Expected gain 2: {(0.9 * 1.1 * 1.2 - 1.0) * 100}")
     
     return result
 
