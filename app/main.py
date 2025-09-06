@@ -31,11 +31,14 @@ async def healthcheck():
             "POST /blankety",
             "POST /trading-formula",
             "POST /investigate",
+            "POST /sailing-club",
+            "POST /sailing-club/submission",
             "GET /The-Ink-Archive",
             "POST /The-Ink-Archive"
         ]
     }
 
+@app.post("/sailing-club/submission")
 @app.post("/sailing-club")
 async def sailing_club_endpoint(request: Request, payload: dict = Body(..., embed=False)):
    """Merge bookings and compute minimum boats needed for schedules"""
