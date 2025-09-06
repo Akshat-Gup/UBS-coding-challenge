@@ -56,7 +56,7 @@ async def mst_calculation_endpoint(request: Request, payload: dict):
 
 
 @app.post("/trading-formula")
-async def evaluate_trading_formula(request: Request, payload: list):
+async def evaluate_trading_formula(request: Request, payload: dict):
     # Enforce Content-Type: application/json for requests
     content_type = request.headers.get("content-type", "")
     if not content_type.startswith("application/json"):
