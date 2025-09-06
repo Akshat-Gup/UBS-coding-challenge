@@ -7,7 +7,7 @@ from app.trading_formula import trading_formula
 from app.mst_calculation import mst_calculation
 from app.investigate import investigate
 
-app = FastAPI(title="UBS Challenge API")
+app = FastAPI(title="UBS Challenge API", version="2.1")
 
 
 @app.get("/")
