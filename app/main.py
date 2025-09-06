@@ -7,6 +7,7 @@ from app.ticketing_agent import ticketing_agent
 from app.blankety_simple import blankety_blanks_simple
 from app.trading_formula import trading_formula
 from app.investigate import investigate
+from app.the_ink_archive import the_ink_archive
 
 # Create FastAPI app
 app = FastAPI(title="UBS Challenge API", version="3.1")
@@ -27,7 +28,9 @@ async def healthcheck():
             "POST /ticketing-agent",
             "POST /blankety",
             "POST /trading-formula",
-            "POST /investigate"
+            "POST /investigate",
+            "GET /The-Ink-Archive",
+            "POST /The-Ink-Archive"
         ]
     }
 
@@ -125,6 +128,46 @@ async def investigate_endpoint(request: Request, payload: Union[dict, list] = Bo
             formatted_payload = {"networks": [payload]}
             result = investigate(formatted_payload)
         
+        return JSONResponse(content=result)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/The-Ink-Archive")
+async def the_ink_archive_get():
+    """Get sample data for The Ink Archive trading challenge"""
+    return {
+        "challenge": "The-Ink-Archive",
+        "description": "Find optimal trading sequences to maximize gain through bartering cycles",
+        "sample_input": {
+            "goods": ["Blue Moss", "Amberback Shells", "Kelp Silk", "Ventspice"],
+            "rates": [
+                [0, 0.9, 0.8, 0.7],
+                [1.1, 0, 0.85, 0.75],
+                [1.2, 1.15, 0, 0.9],
+                [1.3, 1.25, 1.1, 0]
+            ]
+        },
+        "expected_output_format": {
+            "path": [
+                ["Good1", "Good2", "Good3", "Good1"],
+                ["Good4", "Good1", "Good2", "Good4"]
+            ],
+            "gain": 1880
+        }
+    }
+
+
+@app.post("/The-Ink-Archive")
+async def the_ink_archive_endpoint(request: Request, payload: dict):
+    """Find optimal trading sequences to maximize gain through bartering cycles"""
+    # Enforce Content-Type: application/json for requests
+    content_type = request.headers.get("content-type", "")
+    if not content_type.startswith("application/json"):
+        raise HTTPException(status_code=415, detail="Content-Type must be application/json")
+
+    try:
+        result = the_ink_archive(payload)
         return JSONResponse(content=result)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
