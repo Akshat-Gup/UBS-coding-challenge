@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from app.ticketing_agent import ticketing_agent
 from app.mst_calculation import mst_calculation
 from app.blankety import blankety_blanks
+from app.trading_formula import trading_formula
 
 
 app = FastAPI(title="UBS Challenge API")
@@ -49,6 +50,20 @@ async def mst_calculation_endpoint(request: Request, payload: dict):
                 raise ValueError("Each item must be a dictionary with an 'image' field containing base64 data")
         
         result = mst_calculation(payload)
+        return JSONResponse(content=result)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/trading-formula")
+async def evaluate_trading_formula(request: Request, payload: list):
+    # Enforce Content-Type: application/json for requests
+    content_type = request.headers.get("content-type", "")
+    if not content_type.startswith("application/json"):
+        raise HTTPException(status_code=415, detail="Content-Type must be application/json")
+
+    try:
+        result = trading_formula(payload)
         return JSONResponse(content=result)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
