@@ -1,8 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-import importlib.util
-from pathlib import Path
+from app.ticketing_agent import ticketing_agent
 
 
 app = FastAPI(title="UBS Challenge API")
@@ -21,18 +20,7 @@ async def assign(request: Request, payload: dict):
         raise HTTPException(status_code=415, detail="Content-Type must be application/json")
 
     try:
-        # Dynamically load module since filename contains a hyphen
-        module_path = Path(__file__).with_name("ticketing-agent.py")
-        spec = importlib.util.spec_from_file_location("ticketing_agent_module", module_path)
-        if spec is None or spec.loader is None:
-            raise RuntimeError("Failed to load ticketing-agent module")
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        if not hasattr(module, "ticketing_agent"):
-            raise RuntimeError("ticketing_agent function not found in ticketing-agent.py")
-
-        handler = getattr(module, "ticketing_agent")
-        result = handler(payload)
+        result = ticketing_agent(payload)
         return JSONResponse(content=result)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
