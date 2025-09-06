@@ -1,27 +1,43 @@
 from fastapi import FastAPI, HTTPException, Request, Body
 from fastapi.responses import JSONResponse
 
+# Import all endpoint functions
 from app.ticketing_agent import ticketing_agent
 from app.blankety_simple import blankety_blanks_simple
 from app.trading_formula import trading_formula
-# from app.mst_calculation import mst_calculation
 from app.investigate import investigate
 
-app = FastAPI(title="UBS Challenge API", version="2.1")
+# Create FastAPI app
+app = FastAPI(title="UBS Challenge API", version="3.0")
 
 
 @app.get("/")
 async def healthcheck():
-    return {"status": "ok", "message": "UBS challenge server running", "version": "2.1", "timestamp": "2024-01-15"}
+    """Health check endpoint"""
+    return {
+        "status": "ok", 
+        "message": "UBS challenge server running", 
+        "version": "3.0", 
+        "endpoints": [
+            "GET /",
+            "GET /trivia", 
+            "POST /ticketing-agent",
+            "POST /blankety",
+            "POST /trading-formula",
+            "POST /investigate"
+        ]
+    }
 
 
-@app.get("/test")
-async def test_endpoint():
-    return {"message": "This is a test endpoint to verify deployment", "working": True}
+@app.get("/trivia")
+async def trivia():
+    """Get trivia answers"""
+    return {"answers": [4, 1, 2, 2, 3, 4, 4, 5, 4]}
 
 
 @app.post("/ticketing-agent")
-async def assign(request: Request, payload: dict):
+async def ticketing_agent_endpoint(request: Request, payload: dict):
+    """Assign customers to concerts based on ticketing logic"""
     # Enforce Content-Type: application/json for requests
     content_type = request.headers.get("content-type", "")
     if not content_type.startswith("application/json"):
@@ -33,65 +49,10 @@ async def assign(request: Request, payload: dict):
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
-@app.get("/trivia")
-async def trivia():
-    return {"answers": [4,1,2,2,3,4,4,5,4]}
-
-@app.post("/trading-formula")
-async def evaluate_trading_formula(request: Request, payload: list = Body(..., embed=False)):
-    # Enforce Content-Type: application/json for requests
-    content_type = request.headers.get("content-type", "")
-    if not content_type.startswith("application/json"):
-        raise HTTPException(status_code=415, detail="Content-Type must be application/json")
-
-    try:
-        result = trading_formula(payload)
-        return JSONResponse(content=result)
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-  
-
-# @app.post("/mst-calculation")
-# async def mst_calculation_endpoint(request: Request, payload: dict):
-#     # Enforce Content-Type: application/json for requests
-#     content_type = request.headers.get("content-type", "")
-#     if not content_type.startswith("application/json"):
-#         raise HTTPException(status_code=415, detail="Content-Type must be application/json")
-
-#     try:
-#         # Validate payload format
-#         if not isinstance(payload, dict):
-#             raise ValueError("Payload must be a list of objects with 'image' field")
-        
-#         for item in payload:
-#             if not isinstance(item, dict) or "image" not in item:
-#                 raise ValueError("Each item must be a dictionary with an 'image' field containing base64 data")
-        
-#         result = mst_calculation(payload)
-#         return JSONResponse(content=result)
-#     except Exception as exc:
-#         raise HTTPException(status_code=400, detail=str(exc))
-
-
-
-
-
-# @app.post("/trading-formula")
-# async def evaluate_trading_formula(request: Request, payload: dict):
-#     # Enforce Content-Type: application/json for requests
-#     content_type = request.headers.get("content-type", "")
-#     if not content_type.startswith("application/json"):
-#         raise HTTPException(status_code=415, detail="Content-Type must be application/json")
-
-#     try:
-#         result = trading_formula(payload)
-#         return JSONResponse(content=result)
-#     except Exception as exc:
-#         raise HTTPException(status_code=400, detail=str(exc))
-
 
 @app.post("/blankety")
 async def blankety_endpoint(request: Request, payload: dict):
+    """Fill in missing values in time series data using interpolation"""
     # Enforce Content-Type: application/json for requests
     content_type = request.headers.get("content-type", "")
     if not content_type.startswith("application/json"):
@@ -103,8 +64,25 @@ async def blankety_endpoint(request: Request, payload: dict):
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
+
+@app.post("/trading-formula")
+async def trading_formula_endpoint(request: Request, payload: list = Body(..., embed=False)):
+    """Evaluate trading formulas on financial data"""
+    # Enforce Content-Type: application/json for requests
+    content_type = request.headers.get("content-type", "")
+    if not content_type.startswith("application/json"):
+        raise HTTPException(status_code=415, detail="Content-Type must be application/json")
+
+    try:
+        result = trading_formula(payload)
+        return JSONResponse(content=result)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
 @app.post("/investigate")
 async def investigate_endpoint(request: Request, payload: list = Body(..., embed=False)):
+    """Find extra channels in spy networks that can be safely removed"""
     # Enforce Content-Type: application/json for requests
     content_type = request.headers.get("content-type", "")
     if not content_type.startswith("application/json"):
@@ -117,3 +95,27 @@ async def investigate_endpoint(request: Request, payload: list = Body(..., embed
         return JSONResponse(content=result)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+
+# Optional: Add CORS middleware for browser testing
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, specify actual origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# Add a docs redirect for easier access
+@app.get("/docs-redirect")
+async def docs_redirect():
+    """Redirect to API documentation"""
+    return {"message": "Visit /docs for API documentation"}
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
