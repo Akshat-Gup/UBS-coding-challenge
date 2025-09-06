@@ -90,5 +90,14 @@ curl -X POST "$BASE_URL/investigate" \
   }' -s | jq . || echo "Failed"
 echo ""
 
+# Test 7: Snakes & Ladders Power Up (POST /slpu) - Using JSON format
+echo "7️⃣ Testing Snakes & Ladders Power Up (POST /slpu)..."
+curl -X POST "$BASE_URL/slpu" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 128 128\"><rect width=\"128\" height=\"128\" fill=\"white\"/><line x1=\"32\" y1=\"96\" x2=\"96\" y2=\"32\" stroke=\"red\" stroke-width=\"2\"/><line x1=\"32\" y1=\"32\" x2=\"96\" y2=\"96\" stroke=\"green\" stroke-width=\"2\"/></svg>"
+  }' -s || echo "Failed"
+echo ""
+
 echo "✅ All endpoint tests completed!"
 echo "Check the responses above for any failures."

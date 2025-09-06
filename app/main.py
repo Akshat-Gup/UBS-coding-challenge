@@ -10,7 +10,6 @@ from app.investigate import investigate
 from app.the_ink_archive import the_ink_archive
 from app.sailing_club import sailing_club
 from app.princess_diaries import calculate_optimized_schedule
-from app.princess_diaries import calculate_optimized_schedule
 from app.snakes_ladders import snakes_ladders_power_up
 from app.duolingo_sort import duolingo_sort
 # Create FastAPI app
@@ -37,7 +36,9 @@ async def healthcheck():
             "POST /sailing-club",
             "POST /sailing-club/submission",
             "GET /The-Ink-Archive",
-            "POST /The-Ink-Archive"
+            "POST /The-Ink-Archive",
+            "POST /duolingo-sort",
+            "POST /slpu"
         ]
     }
 
@@ -235,17 +236,28 @@ async def optimize_schedule_endpoint(request: Request, payload: dict = Body(...,
 
 
 @app.post("/slpu")
-async def snakes_ladders_power_up_endpoint(request: Request):
+async def snakes_ladders_power_up_endpoint(request: Request, payload: Union[str, dict] = Body(...)):
     """Snakes & Ladders Power Up! game solver"""
-    # Enforce Content-Type: image/svg+xml for SVG input
     content_type = request.headers.get("content-type", "")
-    if not content_type.startswith("image/svg+xml"):
-        raise HTTPException(status_code=415, detail="Content-Type must be image/svg+xml")
-
+    
     try:
-        # Read the raw SVG body content
-        body = await request.body()
-        svg_content = body.decode('utf-8')
+        svg_content = ""
+        
+        # Handle different content types
+        if content_type.startswith("image/svg+xml"):
+            # Raw SVG content
+            body = await request.body()
+            svg_content = body.decode('utf-8')
+        elif content_type.startswith("application/json"):
+            # JSON payload with SVG content
+            if isinstance(payload, dict) and "svg" in payload:
+                svg_content = payload["svg"]
+            elif isinstance(payload, str):
+                svg_content = payload
+            else:
+                raise HTTPException(status_code=400, detail="JSON payload must contain 'svg' field or be a string")
+        else:
+            raise HTTPException(status_code=415, detail="Content-Type must be image/svg+xml or application/json")
         
         # Process the game
         result_svg = snakes_ladders_power_up(svg_content)
