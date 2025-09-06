@@ -7,36 +7,45 @@ def merge_bookings(intervals: List[List[int]]) -> List[List[int]]:
 
     Rules:
     - Intervals are [start, end] with integer hours, end is exclusive.
-    - If previous.end >= current.start, they overlap or touch at a boundary.
-      The merged interval uses min start and max end.
-    - Output must be sorted by end time ascending as per challenge note.
-      We therefore sort by end time first and merge as we scan.
+    - Treat touching intervals as a single busy period: merge when last_end >= start.
+    - After merging, sort merged slots by end time ascending (tie-break by start).
     """
     if not intervals:
         return []
 
-    # Sort by end time, then start time
-    sorted_intervals = sorted(intervals, key=lambda x: (x[1], x[0]))
-
-    merged: List[List[int]] = []
-    for start, end in sorted_intervals:
-        # Skip invalid intervals (guard per constraints but be safe)
+    # Filter invalid/zero-length intervals defensively
+    cleaned: List[List[int]] = []
+    for pair in intervals:
+        if not isinstance(pair, list) or len(pair) != 2:
+            continue
+        start, end = pair
         if start is None or end is None:
             continue
         if start == end:
-            # Minimum duration is 1 hour, ignore zero-length
+            # Ignore zero-length per constraints (min 1 hour)
             continue
+        cleaned.append([start, end])
+
+    if not cleaned:
+        return []
+
+    # Sort by start time first for correct merging
+    cleaned.sort(key=lambda x: (x[0], x[1]))
+
+    merged: List[List[int]] = []
+    for start, end in cleaned:
         if not merged:
             merged.append([start, end])
             continue
         last_start, last_end = merged[-1]
-        if last_end >= start:  # overlap or contiguous
+        if last_end >= start:  # overlap or contiguous boundary
             merged[-1][1] = max(last_end, end)
-            merged[-1][0] = min(last_start, start)
+            # last_start is already <= start due to sorting; no need to adjust
         else:
             merged.append([start, end])
 
-    # Already processed in ascending end-time order, no further sort required
+    # Sort final merged intervals by end time ascending (tie-break by start)
+    merged.sort(key=lambda x: (x[1], x[0]))
     return merged
 
 

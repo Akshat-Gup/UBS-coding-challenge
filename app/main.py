@@ -37,11 +37,10 @@ async def healthcheck():
 
 @app.post("/sailing-club")
 async def sailing_club_endpoint(request: Request, payload: dict = Body(..., embed=False)):
-   """Merge bookings and compute minimum boats needed for schedules"""
+   """Submission endpoint required by challenge under /sailing-club/submission"""
    content_type = request.headers.get("content-type", "")
    if not content_type.startswith("application/json"):
        raise HTTPException(status_code=415, detail="Content-Type must be application/json")
-
 
    try:
        result = sailing_club(payload)
