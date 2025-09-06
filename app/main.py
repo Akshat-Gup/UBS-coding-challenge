@@ -10,6 +10,7 @@ from app.investigate import investigate
 from app.the_ink_archive import the_ink_archive
 from app.sailing_club import sailing_club
 from app.princess_diaries import optimize_schedule
+from app.snakes_ladders import snakes_ladders_power_up
 
 # Create FastAPI app
 app = FastAPI(title="UBS Challenge API", version="3.1")
@@ -32,10 +33,7 @@ async def healthcheck():
             "POST /trading-formula",
             "POST /investigate",
             "GET /The-Ink-Archive",
-            "POST /The-Ink-Archive",
-            "POST /",
-            "POST /sailing-club",
-            "POST /sailing-club/submission"
+            "POST /The-Ink-Archive"
         ]
     }
 
@@ -231,6 +229,30 @@ async def optimize_schedule_endpoint(request: Request, payload: dict = Body(...,
        return JSONResponse(content=result)
    except Exception as exc:
        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/slpu")
+async def snakes_ladders_power_up_endpoint(request: Request):
+    """Snakes & Ladders Power Up! game solver"""
+    # Enforce Content-Type: image/svg+xml for SVG input
+    content_type = request.headers.get("content-type", "")
+    if not content_type.startswith("image/svg+xml"):
+        raise HTTPException(status_code=415, detail="Content-Type must be image/svg+xml")
+
+    try:
+        # Read the raw SVG body content
+        body = await request.body()
+        svg_content = body.decode('utf-8')
+        
+        # Process the game
+        result_svg = snakes_ladders_power_up(svg_content)
+        
+        # Return SVG response
+        from fastapi.responses import Response
+        return Response(content=result_svg, media_type="image/svg+xml")
+        
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
    
 
 if __name__ == "__main__":
