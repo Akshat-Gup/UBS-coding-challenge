@@ -38,7 +38,7 @@ async def healthcheck():
 @app.get("/trivia")
 async def trivia():
     """Get trivia answers"""
-    return {"answers": [4, 1, 2, 2, 3, 4, 4, 5, 4]}
+    return {"answers": [4, 1, 2, 2, 3, 4, 4, 5, 4, 3, 3, 2, 1, 4, 2, 1, 1, 2, 2, 1, 2, 3, 2, 4, 2]}
 
 
 @app.get("/debug")
