@@ -11,9 +11,10 @@ from app.the_ink_archive import the_ink_archive
 from app.sailing_club import sailing_club
 from app.princess_diaries import calculate_optimized_schedule
 from app.snakes_ladders import snakes_ladders_power_up
-
+from app.duolingo_sort import duolingo_sort
 # Create FastAPI app
 app = FastAPI(title="UBS Challenge API", version="3.1")
+
 
 
 @app.get("/")
@@ -33,7 +34,8 @@ async def healthcheck():
             "POST /trading-formula",
             "POST /investigate",
             "GET /The-Ink-Archive",
-            "POST /The-Ink-Archive"
+            "POST /The-Ink-Archive",
+            "POST /duolingo-sort"
         ]
     }
 
@@ -258,3 +260,18 @@ async def snakes_ladders_power_up_endpoint(request: Request):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+@app.post("/duolingo-sort")
+async def duolingo_sort_endpoint(request: Request, payload: dict = Body(..., embed=False)):
+    """Sort numbers in different languages according to Duolingo Sort challenge requirements"""
+    content_type = request.headers.get("content-type", "")
+    if not content_type.startswith("application/json"):
+        raise HTTPException(status_code=415, detail="Content-Type must be application/json")
+
+    try:
+        result = duolingo_sort(payload)
+        return JSONResponse(content=result)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
