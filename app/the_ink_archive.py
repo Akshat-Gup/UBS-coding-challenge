@@ -479,25 +479,28 @@ def test_ink_archive():
     import json
     print(json.dumps(result, indent=2))
     
-    # Let's also manually verify the expected paths:
-    print("\nManual verification:")
+    # Manual verification of expected paths:
+    print("\nManual verification of expected paths:")
     
-    # First challenge: Kelp Silk -> Amberback Shells -> Ventspice -> Kelp Silk
+    # First challenge: Expected path: Kelp Silk -> Amberback Shells -> Ventspice -> Kelp Silk
+    # Goods indices: Blue Moss(0), Amberback Shells(1), Kelp Silk(2), Ventspice(3)
     # Path: 2 -> 1 -> 3 -> 2
-    # Rates: 120.0 * 0.000055 * 2600000.0 = 17160.0
-    # Gain: (17160.0 - 1.0) * 100 = 1715900% (this seems wrong, let me recalculate)
+    # Rates: 2->1 (0.0075), 1->3 (0.000055), 3->2 (2600000.0)
+    # Calculation: 0.0075 * 0.000055 * 2600000.0 = 1.07250
+    # Gain: (1.07250 - 1.0) * 100 = 7.25%
+    print("Expected path 1: Kelp Silk -> Amberback Shells -> Ventspice -> Kelp Silk")
+    print(f"Calculation: 0.0075 * 0.000055 * 2600000.0 = {0.0075 * 0.000055 * 2600000.0}")
+    print(f"Expected gain 1: {(0.0075 * 0.000055 * 2600000.0 - 1.0) * 100}")
     
-    # Let's check: Kelp Silk(2) -> Amberback Shells(1) -> Ventspice(3) -> Kelp Silk(2)
-    # 2->1: 0.0075, 1->3: 0.000055, 3->2: 2600000.0
-    # Total: 0.0075 * 0.000055 * 2600000.0 = 1.072500
-    # Gain: (1.072500 - 1.0) * 100 = 7.25%
-    print("Expected path 1 gain: 7.25%")
-    
-    # Second challenge: Drift Kelp -> Sponge Flesh -> Saltbeads -> Drift Kelp  
-    # 0->1: 0.9, 1->2: 1.1, 2->0: 1.2
-    # Total: 0.9 * 1.1 * 1.2 = 1.188
+    # Second challenge: Expected path: Drift Kelp -> Sponge Flesh -> Saltbeads -> Drift Kelp  
+    # Goods indices: Drift Kelp(0), Sponge Flesh(1), Saltbeads(2)
+    # Path: 0 -> 1 -> 2 -> 0
+    # Rates: 0->1 (0.9), 1->2 (1.1), 2->0 (1.2)
+    # Calculation: 0.9 * 1.1 * 1.2 = 1.188
     # Gain: (1.188 - 1.0) * 100 = 18.8%
-    print("Expected path 2 gain: 18.8%")
+    print("Expected path 2: Drift Kelp -> Sponge Flesh -> Saltbeads -> Drift Kelp")
+    print(f"Calculation: 0.9 * 1.1 * 1.2 = {0.9 * 1.1 * 1.2}")
+    print(f"Expected gain 2: {(0.9 * 1.1 * 1.2 - 1.0) * 100}")
     
     return result
 
