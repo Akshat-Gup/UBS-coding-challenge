@@ -12,7 +12,7 @@ app = FastAPI(title="UBS Challenge API", version="2.1")
 
 @app.get("/")
 async def healthcheck():
-    return {"status": "ok", "message": "UBS challenge server running", "version": "2.0", "timestamp": "2024-01-15"}
+    return {"status": "ok", "message": "UBS challenge server running", "version": "2.1", "timestamp": "2024-01-15"}
 
 
 @app.get("/test")
