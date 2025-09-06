@@ -8,6 +8,7 @@ from app.blankety_simple import blankety_blanks_simple
 from app.trading_formula import trading_formula
 from app.investigate import investigate
 from app.the_ink_archive import the_ink_archive
+from app.sailing_club import sailing_club
 
 # Create FastAPI app
 app = FastAPI(title="UBS Challenge API", version="3.1")
@@ -34,7 +35,20 @@ async def healthcheck():
         ]
     }
 
+@app.post("/sailing-club")
+async def sailing_club_endpoint(request: Request, payload: dict = Body(..., embed=False)):
+   """Merge bookings and compute minimum boats needed for schedules"""
+   content_type = request.headers.get("content-type", "")
+   if not content_type.startswith("application/json"):
+       raise HTTPException(status_code=415, detail="Content-Type must be application/json")
 
+
+   try:
+       result = sailing_club(payload)
+       return JSONResponse(content=result)
+   except Exception as exc:
+       raise HTTPException(status_code=400, detail=str(exc))
+   
 @app.get("/trivia")
 async def trivia():
     """Get trivia answers"""
