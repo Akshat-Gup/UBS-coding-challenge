@@ -102,7 +102,7 @@ async def trading_formula_endpoint(request: Request, payload: list = Body(..., e
 
 
 @app.post("/investigate")
-async def investigate_endpoint(request: Request, payload: dict):
+async def investigate_endpoint(request: Request, payload=Body(...)):
     """Find extra channels in spy networks that can be safely removed"""
     # Enforce Content-Type: application/json for requests
     content_type = request.headers.get("content-type", "")
