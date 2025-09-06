@@ -9,6 +9,7 @@ from app.trading_formula import trading_formula
 from app.investigate import investigate
 from app.the_ink_archive import the_ink_archive
 from app.sailing_club import sailing_club
+from app.princess_diaries import optimize_schedule
 
 # Create FastAPI app
 app = FastAPI(title="UBS Challenge API", version="3.1")
@@ -37,10 +38,11 @@ async def healthcheck():
 
 @app.post("/sailing-club")
 async def sailing_club_endpoint(request: Request, payload: dict = Body(..., embed=False)):
-   """Submission endpoint required by challenge under /sailing-club/submission"""
+   """Merge bookings and compute minimum boats needed for schedules"""
    content_type = request.headers.get("content-type", "")
    if not content_type.startswith("application/json"):
        raise HTTPException(status_code=415, detail="Content-Type must be application/json")
+
 
    try:
        result = sailing_club(payload)
@@ -48,10 +50,11 @@ async def sailing_club_endpoint(request: Request, payload: dict = Body(..., embe
    except Exception as exc:
        raise HTTPException(status_code=400, detail=str(exc))
    
+
 @app.get("/trivia")
 async def trivia():
     """Get trivia answers"""
-    return {"answers": [3, 1, 2, 2, 3, 4, 4, 5, 4, 3, 3, 2, 1, 4, 2, 1, 1, 2, 2, 1, 2, 3, 2, 4, 2]}
+    return {"answers": [2, 1, 2, 2, 3, 4, 4, 5, 4, 3, 3, 2, 1, 4, 2, 1, 1, 2, 2, 1, 2, 3, 2, 4, 2]}
 
 
 @app.get("/debug")
@@ -208,6 +211,23 @@ async def docs_redirect():
     """Redirect to API documentation"""
     return {"message": "Visit /docs for API documentation"}
 
+
+
+
+@app.post("/princess-diaries")
+async def optimize_schedule(request: Request, payload: dict = Body(..., embed=False)):
+   """Merge bookings and compute minimum boats needed for schedules"""
+   content_type = request.headers.get("content-type", "")
+   if not content_type.startswith("application/json"):
+       raise HTTPException(status_code=415, detail="Content-Type must be application/json")
+
+
+   try:
+       result = optimize_schedule(payload)
+       return JSONResponse(content=result)
+   except Exception as exc:
+       raise HTTPException(status_code=400, detail=str(exc))
+   
 
 if __name__ == "__main__":
     import uvicorn
