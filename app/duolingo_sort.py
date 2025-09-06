@@ -59,15 +59,28 @@ def parse_number_to_int(text: str) -> int:
     if is_roman_numeral(text):
         return roman_to_int(text)
     
-    # Check if it's Traditional Chinese
-    trad_chinese_value = traditional_chinese_to_int(text)
-    if trad_chinese_value is not None and trad_chinese_value >= 0:
-        return trad_chinese_value
-    
-    # Check if it's Simplified Chinese
-    simp_chinese_value = simplified_chinese_to_int(text)
-    if simp_chinese_value is not None and simp_chinese_value >= 0:
-        return simp_chinese_value
+    # Chinese detection: prefer parser based on presence of script-specific chars
+    contains_simplified_only = any(c in text for c in ['万', '亿'])
+    contains_traditional_only = any(c in text for c in ['萬', '億'])
+
+    # Prefer Simplified parser when simplified-only chars detected
+    if contains_simplified_only and not contains_traditional_only:
+        simp_chinese_value = simplified_chinese_to_int(text)
+        if simp_chinese_value is not None and simp_chinese_value >= 0:
+            return simp_chinese_value
+        # Fallback to Traditional
+        trad_chinese_value = traditional_chinese_to_int(text)
+        if trad_chinese_value is not None and trad_chinese_value >= 0:
+            return trad_chinese_value
+    else:
+        # Prefer Traditional (covers shared chars 十百千 and traditional-only 萬/億)
+        trad_chinese_value = traditional_chinese_to_int(text)
+        if trad_chinese_value is not None and trad_chinese_value >= 0:
+            return trad_chinese_value
+        # Fallback to Simplified
+        simp_chinese_value = simplified_chinese_to_int(text)
+        if simp_chinese_value is not None and simp_chinese_value >= 0:
+            return simp_chinese_value
     
     # Check if it's German
     german_value = german_to_int(text)
@@ -94,12 +107,16 @@ def get_language_priority(text: str) -> int:
     elif text.isdigit():
         return 5
     else:
-        # Check Traditional Chinese first
+        # Early detect by script-specific chars to avoid misclassification
+        if any(c in text for c in ['萬', '億']):
+            return 2
+        if any(c in text for c in ['万', '亿']):
+            return 3
+
+        # Otherwise try parsers
         trad_chinese_value = traditional_chinese_to_int(text)
         if trad_chinese_value is not None and trad_chinese_value >= 0:
             return 2
-        
-        # Check Simplified Chinese
         simp_chinese_value = simplified_chinese_to_int(text)
         if simp_chinese_value is not None and simp_chinese_value >= 0:
             return 3
@@ -179,6 +196,10 @@ def english_to_int(text: str) -> int:
     
     # Check if text contains any English number words
     words = text.replace('-', ' ').replace(',', '').split()
+    # Treat common fillers
+    words = [w for w in words if w not in {'and'}]
+    # Support colloquial "a hundred" / "an hundred" => 100
+    words = ['one' if w in {'a', 'an'} else w for w in words]
     has_english_words = any(word in ones or word in tens or word in scales for word in words)
     if not has_english_words:
         return None
@@ -188,9 +209,6 @@ def english_to_int(text: str) -> int:
     current = 0
     
     for word in words:
-        if word == 'and':
-            # English often uses "and" as a conjunction: "one hundred and one"
-            continue
         if word in ones:
             current += ones[word]
         elif word in tens:
@@ -208,31 +226,25 @@ def english_to_int(text: str) -> int:
 
 
 def _parse_chinese_small_segment(segment: str, digits: Dict[str, int], small_units: Dict[str, int]) -> int:
-    """Parse a Chinese number segment without large units (e.g., up to thousands).
-    Handles patterns like 二千三百零四, 十五, 二十, 三百零二, 千零三, 百, 千, 十, etc.
-    """
+    """Parse a Chinese number segment up to thousands (no large units)."""
     if not segment:
         return 0
-
     value = 0
     current_num = 0
-    i = 0
-    while i < len(segment):
-        ch = segment[i]
+    for ch in segment:
         if ch in digits:
+            # digits may include zero variants; zero resets current number
             current_num = digits[ch]
         elif ch in small_units:
             unit_val = small_units[ch]
             if current_num == 0:
-                # Implicit one, e.g., 十 -> 10, 百 -> 100
+                # Implicit one for bare units like 十, 百, 千
                 current_num = 1
             value += current_num * unit_val
             current_num = 0
         else:
-            # Skip placeholders like 零 or 〇 or any unknown char in this context
+            # Skip placeholder zeros or unknown chars gracefully (e.g., 零, 〇)
             pass
-        i += 1
-
     value += current_num
     return value
 
@@ -242,8 +254,7 @@ def _parse_chinese_number(text: str,
                           small_units: Dict[str, int],
                           large_units_ordered: List[Tuple[str, int]]) -> int:
     """Parse a Chinese number string using provided digit map and units.
-    large_units_ordered should be provided from largest to smallest, e.g., [("兆",10**12),("億",10**8),("萬",10**4)].
-    This function supports zeros (零/〇) as placeholders, and implicit ones for unit-only tokens.
+    large_units_ordered should be from largest to smallest, e.g., [("兆",10**12),("億",10**8),("萬",10**4)].
     """
     # Quick single-char handling
     if len(text) == 1:
@@ -256,25 +267,17 @@ def _parse_chinese_number(text: str,
                 return mult
         return None
 
-    # Remove placeholder zeros to simplify splitting logic (but keep structure by not collapsing completely)
-    # We'll keep zeros inside segments; for splitting on large units it's okay to leave them as-is.
-
-    # Recursive decomposition by largest units first
-    remaining = text
+    # Decompose by large units
     total = 0
+    remaining = text
     for unit_char, multiplier in large_units_ordered:
         if unit_char in remaining:
-            parts = remaining.split(unit_char)
-            # There could be multiple occurrences; process left-most once each iteration, then continue on the remainder
-            left = parts[0]
-            right = unit_char.join(parts[1:])  # Re-join the rest if multiple units of same char appear
-
+            left, right = remaining.split(unit_char, 1)
             left_val = _parse_chinese_small_segment(left, digits, small_units) if left else 1
             total += left_val * multiplier
             remaining = right
-    # Finally, add the tail segment (below the smallest large unit)
-    tail_val = _parse_chinese_small_segment(remaining, digits, small_units) if remaining else 0
-    total += tail_val
+    # Tail segment
+    total += _parse_chinese_small_segment(remaining, digits, small_units) if remaining else 0
     return total
 
 
@@ -284,7 +287,7 @@ def traditional_chinese_to_int(text: str) -> int:
     digits = {
         '零': 0, '〇': 0,
         '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9,
-        '兩': 2  # Traditional alternate for two
+        '兩': 2
     }
     small_units = {'十': 10, '百': 100, '千': 1000}
     # Order large units from largest to smallest
@@ -303,7 +306,7 @@ def simplified_chinese_to_int(text: str) -> int:
     digits = {
         '零': 0, '〇': 0,
         '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9,
-        '两': 2  # Simplified alternate for two
+        '两': 2
     }
     small_units = {'十': 10, '百': 100, '千': 1000}
     large_units = [('兆', 10**12), ('亿', 10**8), ('万', 10**4)]
@@ -318,10 +321,17 @@ def simplified_chinese_to_int(text: str) -> int:
 def german_to_int(text: str) -> int:
     """Convert German number words to integer"""
     text = text.lower().strip()
-    text = text.replace('ß', 'ss')
     
-    # Check if this contains non-German characters
-    if not all(ord(c) < 256 for c in text):  # German uses extended ASCII
+    # Normalize common ASCII fallbacks for German umlauts and ß
+    normalized = (text
+                  .replace('ä', 'ae')
+                  .replace('ö', 'oe')
+                  .replace('ü', 'ue')
+                  .replace('ß', 'ss'))
+    text = normalized
+    
+    # Check if this contains non-German characters (basic heuristic)
+    if not all(ord(c) < 256 for c in text):
         return None
     
     # Basic German numbers
@@ -333,8 +343,13 @@ def german_to_int(text: str) -> int:
     }
     
     tens = {
-        'zwanzig': 20, 'dreißig': 30, 'vierzig': 40, 'fünfzig': 50,
-        'sechzig': 60, 'siebzig': 70, 'achtzig': 80, 'neunzig': 90
+        'zwanzig': 20, 'dreissig': 30, 'dreisssig': 30, 'dreissig': 30, 'dreissig': 30,
+        'dreissig': 30, 'dreissig': 30, 'dreissig': 30,  # keep duplicates harmless
+        'dreissig': 30, 'dreissig': 30, 'dreissig': 30,
+        'dreissig': 30, 'vierzig': 40, 'fuenfzig': 50,
+        'sechzig': 60, 'siebzig': 70, 'achtzig': 80, 'neunzig': 90,
+        # canonical forms too (after normalization these won't occur, but safe to include)
+        'dreißig': 30, 'fünfzig': 50
     }
     
     # Check if text contains German number words
@@ -358,22 +373,6 @@ def german_to_int(text: str) -> int:
     if not has_german_words:
         return None
     
-    # Handle thousands first: <prefix>tausend<suffix>
-    if 'tausend' in text:
-        left, right = text.split('tausend', 1)
-        left_val = german_to_int(left) if left else 1
-        right_val = german_to_int(right) if right else 0
-        if left_val is not None and right_val is not None:
-            return left_val * 1000 + right_val
-    
-    # Handle hundreds: <prefix>hundert<suffix>
-    if 'hundert' in text:
-        left, right = text.split('hundert', 1)
-        left_val = german_to_int(left) if left else 1
-        right_val = german_to_int(right) if right else 0
-        if left_val is not None and right_val is not None:
-            return left_val * 100 + right_val
-
     # Handle compound numbers like "einundzwanzig" (21) or "siebenundachtzig" (87)
     if 'und' in text:
         parts = text.split('und')
@@ -385,8 +384,45 @@ def german_to_int(text: str) -> int:
             if ones_val > 0 and tens_val > 0:
                 return ones_val + tens_val
     
-    # Handle bare "tausend"
-    if text == 'tausend':
-        return 1000
+    # Handle hundreds like "dreihundert" (300) or "dreihundertelf" (311)
+    if 'hundert' in text:
+        if text == 'hundert':
+            return 100
+        
+        # Split on hundert
+        parts = text.split('hundert')
+        if len(parts) == 2:
+            prefix = parts[0]
+            suffix = parts[1]
+            
+            # Get hundreds value
+            hundreds_val = ones.get(prefix, 1) * 100
+            
+            # Get remainder value
+            remainder_val = 0
+            if suffix:
+                if suffix in ones:
+                    remainder_val = ones[suffix]
+                elif suffix in tens:
+                    remainder_val = tens[suffix]
+                else:
+                    # Try recursive parsing
+                    remainder_parsed = german_to_int(suffix)
+                    if remainder_parsed is not None:
+                        remainder_val = remainder_parsed
+            
+            return hundreds_val + remainder_val
+    
+    # Handle thousands
+    if 'tausend' in text:
+        if text == 'tausend':
+            return 1000
+        prefix = text.replace('tausend', '')
+        if prefix in ones:
+            return ones[prefix] * 1000
+        # Handle complex cases
+        prefix_val = german_to_int(prefix)
+        if prefix_val is not None:
+            return prefix_val * 1000
     
     return None
