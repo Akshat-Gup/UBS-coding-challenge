@@ -19,8 +19,8 @@ async def healthcheck():
     return {
         "status": "ok", 
         "message": "UBS challenge server running", 
-        "version": "3.1",
-        "last_updated": "2024-01-16T15:45:00Z",
+        "version": "3.2",
+        "last_updated": "2024-09-06T08:10:00Z",
         "investigate_fix": "Fixed to accept both dict and list payload formats with Union type annotation",
         "endpoints": [
             "GET /",
