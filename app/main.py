@@ -9,7 +9,7 @@ from app.trading_formula import trading_formula
 from app.investigate import investigate
 from app.the_ink_archive import the_ink_archive
 from app.sailing_club import sailing_club
-from app.princess_diaries import optimize_schedule
+from app.princess_diaries import calculate_optimized_schedule
 from app.snakes_ladders import snakes_ladders_power_up
 
 # Create FastAPI app
@@ -225,7 +225,7 @@ async def optimize_schedule_endpoint(request: Request, payload: dict = Body(...,
 
 
    try:
-       result = optimize_schedule(payload)
+       result = calculate_optimized_schedule(payload)
        return JSONResponse(content=result)
    except Exception as exc:
        raise HTTPException(status_code=400, detail=str(exc))
