@@ -1,8 +1,9 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Body
 from fastapi.responses import JSONResponse
 
 from app.ticketing_agent import ticketing_agent
 from app.blankety_simple import blankety_blanks_simple
+from app.trading_formula import trading_formula
 
 
 app = FastAPI(title="UBS Challenge API")
@@ -36,7 +37,7 @@ async def trivia():
     return {"answers": [4,1,2,2,3,4,4,5,4]}
 
 @app.post("/trading-formula")
-async def evaluate_trading_formula(request: Request, payload: list):
+async def evaluate_trading_formula(request: Request, payload: list = Body(..., embed=False)):
     # Enforce Content-Type: application/json for requests
     content_type = request.headers.get("content-type", "")
     if not content_type.startswith("application/json"):
