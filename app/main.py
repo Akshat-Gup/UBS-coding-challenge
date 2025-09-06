@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 from app.ticketing_agent import ticketing_agent
 from app.blankety_simple import blankety_blanks_simple
 from app.trading_formula import trading_formula
-from app.mst_calculation import mst_calculation
+# from app.mst_calculation import mst_calculation
 from app.investigate import investigate
 
 app = FastAPI(title="UBS Challenge API", version="2.1")
@@ -71,6 +71,7 @@ async def evaluate_trading_formula(request: Request, payload: list = Body(..., e
 #         return JSONResponse(content=result)
 #     except Exception as exc:
 #         raise HTTPException(status_code=400, detail=str(exc))
+
 
 
 
