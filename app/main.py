@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 from app.ticketing_agent import ticketing_agent
 from app.blankety_simple import blankety_blanks_simple
 from app.trading_formula import trading_formula
-
+from app.mst_calculation import mst_calculation
 
 app = FastAPI(title="UBS Challenge API")
 
@@ -48,29 +48,28 @@ async def evaluate_trading_formula(request: Request, payload: list = Body(..., e
         return JSONResponse(content=result)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-# Temporarily comment out endpoints with problematic imports for debugging
-# @app.post("/mst-calculation")
-# async def mst_calculation_endpoint(request: Request, payload: dict):
-#     # Enforce Content-Type: application/json for requests
-#     content_type = request.headers.get("content-type", "")
-#     if not content_type.startswith("application/json"):
-#         raise HTTPException(status_code=415, detail="Content-Type must be application/json")
+  
 
-#     try:
-#         # Validate payload format
-#         if not isinstance(payload, dict):
-#             raise ValueError("Payload must be a list of objects with 'image' field")
+@app.post("/mst-calculation")
+async def mst_calculation_endpoint(request: Request, payload: dict):
+    # Enforce Content-Type: application/json for requests
+    content_type = request.headers.get("content-type", "")
+    if not content_type.startswith("application/json"):
+        raise HTTPException(status_code=415, detail="Content-Type must be application/json")
+
+    try:
+        # Validate payload format
+        if not isinstance(payload, dict):
+            raise ValueError("Payload must be a list of objects with 'image' field")
         
-#         for item in payload:
-#             if not isinstance(item, dict) or "image" not in item:
-#                 raise ValueError("Each item must be a dictionary with an 'image' field containing base64 data")
+        for item in payload:
+            if not isinstance(item, dict) or "image" not in item:
+                raise ValueError("Each item must be a dictionary with an 'image' field containing base64 data")
         
-#         result = mst_calculation(payload)
-#         return JSONResponse(content=result)
-#     except Exception as exc:
-#         raise HTTPException(status_code=400, detail=str(exc))
-
-
+        result = mst_calculation(payload)
+        return JSONResponse(content=result)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 # @app.post("/trading-formula")
 # async def evaluate_trading_formula(request: Request, payload: dict):
 #     # Enforce Content-Type: application/json for requests
