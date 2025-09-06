@@ -5,6 +5,7 @@ from app.ticketing_agent import ticketing_agent
 from app.blankety_simple import blankety_blanks_simple
 from app.trading_formula import trading_formula
 from app.mst_calculation import mst_calculation
+from app.investigate import investigate
 
 app = FastAPI(title="UBS Challenge API")
 
@@ -98,14 +99,14 @@ async def blankety_endpoint(request: Request, payload: dict):
         raise HTTPException(status_code=400, detail=str(exc))
 
 @app.post("/investigate")
-async def blankety_endpoint(request: Request, payload: dict):
+async def investigate_endpoint(request: Request, payload: dict):
     # Enforce Content-Type: application/json for requests
     content_type = request.headers.get("content-type", "")
     if not content_type.startswith("application/json"):
         raise HTTPException(status_code=415, detail="Content-Type must be application/json")
 
     try:
-        result = blankety_blanks_simple(payload)
+        result = investigate(payload)
         return JSONResponse(content=result)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
