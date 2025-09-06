@@ -104,14 +104,16 @@ async def blankety_endpoint(request: Request, payload: dict):
         raise HTTPException(status_code=400, detail=str(exc))
 
 @app.post("/investigate")
-async def investigate_endpoint(request: Request, payload: dict):
+async def investigate_endpoint(request: Request, payload: list = Body(..., embed=False)):
     # Enforce Content-Type: application/json for requests
     content_type = request.headers.get("content-type", "")
     if not content_type.startswith("application/json"):
         raise HTTPException(status_code=415, detail="Content-Type must be application/json")
 
     try:
-        result = investigate(payload)
+        # Wrap the list payload in the expected format
+        formatted_payload = {"networks": payload}
+        result = investigate(formatted_payload)
         return JSONResponse(content=result)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
