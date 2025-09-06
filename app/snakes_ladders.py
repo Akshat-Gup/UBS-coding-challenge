@@ -439,8 +439,13 @@ def find_optimal_sequence(board: Board) -> List[int]:
     Returns:
         Optimal dice roll sequence
     """
+    # Calculate optimal sequence length based on board size
+    optimal_length = calculate_optimal_length(board)
+    
     # Try different approaches in order of preference
     strategies = [
+        lambda: try_adaptive_search(board, optimal_length),
+        lambda: try_smart_pattern(board, optimal_length),
         lambda: try_systematic_search(board),
         lambda: try_pattern_based(board),
         lambda: simple_winning_sequence(board)
@@ -450,28 +455,182 @@ def find_optimal_sequence(board: Board) -> List[int]:
         try:
             result = strategy()
             if result and validate_sequence(result, board):
+                print(f"Strategy succeeded with {len(result)} rolls")
                 return result
-        except:
+        except Exception as e:
+            print(f"Strategy failed: {e}")
             continue
     
     # Fallback to simple pattern
     return simple_winning_sequence(board)
 
 
+def calculate_optimal_length(board: Board) -> int:
+    """
+    Calculate optimal sequence length based on board characteristics.
+    
+    Args:
+        board: Game board
+        
+    Returns:
+        Optimal sequence length
+    """
+    # Base calculation: roughly 2-3 moves per square for small boards, less for large boards
+    if board.total_squares <= 16:
+        return min(20, board.total_squares * 2)
+    elif board.total_squares <= 64:
+        return min(30, board.total_squares * 1.5)
+    elif board.total_squares <= 256:
+        return min(40, board.total_squares * 1.2)
+    else:
+        return min(50, board.total_squares * 0.8)
+
+
+def try_adaptive_search(board: Board, target_length: int) -> List[int]:
+    """
+    Try an adaptive search that adjusts strategy based on board characteristics.
+    """
+    # Analyze board characteristics
+    snake_count = len(board.snakes)
+    ladder_count = len(board.ladders)
+    board_size = board.total_squares
+    
+    # Generate sequences based on board analysis
+    sequences_to_try = []
+    
+    if snake_count > ladder_count:
+        # More snakes - use conservative approach
+        sequences_to_try.extend([
+            generate_conservative_sequence(target_length),
+            generate_cautious_sequence(target_length),
+        ])
+    elif ladder_count > snake_count:
+        # More ladders - use aggressive approach
+        sequences_to_try.extend([
+            generate_aggressive_sequence(target_length),
+            generate_quick_sequence(target_length),
+        ])
+    else:
+        # Balanced board - use mixed approach
+        sequences_to_try.extend([
+            generate_balanced_sequence(target_length),
+            generate_mixed_sequence(target_length),
+        ])
+    
+    # Try each sequence
+    for sequence in sequences_to_try:
+        if validate_sequence(sequence, board):
+            return sequence
+    
+    return None
+
+
+def generate_conservative_sequence(length: int) -> List[int]:
+    """Generate a conservative sequence with small moves for player 1, larger for player 2."""
+    sequence = []
+    for i in range(length):
+        if i % 2 == 0:  # Player 1 - small moves
+            sequence.append(random.choice([1, 2, 3]))
+        else:  # Player 2 - larger moves
+            sequence.append(random.choice([4, 5, 6]))
+    return sequence
+
+
+def generate_aggressive_sequence(length: int) -> List[int]:
+    """Generate an aggressive sequence with quick moves."""
+    sequence = []
+    for i in range(length):
+        if i % 2 == 0:  # Player 1 - very small moves
+            sequence.append(random.choice([1, 2]))
+        else:  # Player 2 - large moves
+            sequence.append(random.choice([5, 6]))
+    return sequence
+
+
+def generate_balanced_sequence(length: int) -> List[int]:
+    """Generate a balanced sequence."""
+    sequence = []
+    for i in range(length):
+        if i % 2 == 0:  # Player 1
+            sequence.append(random.choice([1, 2, 3, 4]))
+        else:  # Player 2
+            sequence.append(random.choice([3, 4, 5, 6]))
+    return sequence
+
+
+def generate_cautious_sequence(length: int) -> List[int]:
+    """Generate a cautious sequence avoiding large moves."""
+    sequence = []
+    for i in range(length):
+        if i % 2 == 0:  # Player 1
+            sequence.append(random.choice([1, 2]))
+        else:  # Player 2
+            sequence.append(random.choice([3, 4]))
+    return sequence
+
+
+def generate_quick_sequence(length: int) -> List[int]:
+    """Generate a quick sequence with frequent 6s."""
+    sequence = []
+    for i in range(length):
+        if i % 2 == 0:  # Player 1
+            sequence.append(random.choice([1, 2]))
+        else:  # Player 2
+            sequence.append(6 if random.random() < 0.6 else random.choice([4, 5]))
+    return sequence
+
+
+def generate_mixed_sequence(length: int) -> List[int]:
+    """Generate a mixed sequence with varied patterns."""
+    sequence = []
+    patterns = [
+        [1, 6], [2, 5], [3, 4], [1, 5], [2, 6], [3, 5]
+    ]
+    
+    for i in range(length):
+        pattern = patterns[i % len(patterns)]
+        sequence.append(pattern[i % 2])
+    
+    return sequence
+
+
+def try_smart_pattern(board: Board, target_length: int) -> List[int]:
+    """
+    Try a smart pattern based on board size and characteristics.
+    """
+    # Create patterns that adapt to board size
+    if board.total_squares <= 16:
+        # Small board - use simple alternating pattern
+        return [1, 6] * (target_length // 2) + [1] * (target_length % 2)
+    elif board.total_squares <= 64:
+        # Medium board - use varied pattern
+        pattern = [1, 6, 2, 5, 1, 6, 2, 5]
+        return (pattern * (target_length // len(pattern) + 1))[:target_length]
+    else:
+        # Large board - use longer pattern
+        pattern = [1, 6, 2, 6, 1, 5, 2, 6, 1, 6]
+        return (pattern * (target_length // len(pattern) + 1))[:target_length]
+
+
 def try_systematic_search(board: Board) -> List[int]:
     """
     Try a systematic search for winning sequences.
     """
-    # For complex boards, try various combinations
+    # Calculate appropriate length based on board size
+    max_length = min(30, board.total_squares // 10 + 10)
+    
+    # For complex boards, try various combinations with shorter sequences
     patterns = [
-        [1, 6] * min(12, board.total_squares // 2),
-        [2, 6] * min(10, board.total_squares // 3), 
-        [1, 5, 2, 6] * min(8, board.total_squares // 4),
-        [3, 6, 1, 6, 2, 6] * min(6, board.total_squares // 6)
+        [1, 6] * (max_length // 2),
+        [2, 5] * (max_length // 2),
+        [1, 5, 2, 6] * (max_length // 4),
+        [3, 6, 1, 6] * (max_length // 4),
+        [1, 4, 2, 5] * (max_length // 4),
+        [2, 6, 1, 5] * (max_length // 4)
     ]
     
     for pattern in patterns:
-        if validate_sequence(pattern, board):
+        if len(pattern) > 0 and validate_sequence(pattern, board):
             return pattern
     
     return None
@@ -485,16 +644,19 @@ def try_pattern_based(board: Board) -> List[int]:
     snake_count = len(board.snakes)
     ladder_count = len(board.ladders)
     
+    # Calculate appropriate sequence length
+    max_length = min(25, board.total_squares // 15 + 8)
+    
     # Adjust strategy based on snakes and ladders
     if snake_count > ladder_count:
         # More snakes - be more cautious
-        return [1, 4, 2, 5, 1, 6] * min(8, board.total_squares // 6)
+        return [1, 4, 2, 5, 1, 6] * (max_length // 6) + [1, 4, 2, 5][:max_length % 6]
     elif ladder_count > snake_count:
         # More ladders - be more aggressive
-        return [2, 6, 1, 6, 3, 6] * min(8, board.total_squares // 6)
+        return [2, 6, 1, 6, 3, 6] * (max_length // 6) + [2, 6, 1, 6][:max_length % 6]
     else:
         # Balanced - use standard approach
-        return [1, 6, 2, 6] * min(10, board.total_squares // 4)
+        return [1, 6, 2, 6] * (max_length // 4) + [1, 6][:max_length % 4]
 
 
 def validate_sequence(dice_rolls: List[int], board: Board) -> bool:
@@ -558,16 +720,19 @@ def simple_winning_sequence(board: Board) -> List[int]:
     Returns:
         Simple dice roll sequence
     """
-    # For any board size, use a pattern that tends to work
+    # Calculate appropriate length based on board size
     if board.total_squares <= 16:
         # Small board - use simple alternating pattern
         return [1, 6, 1, 6, 1, 6, 1, 6]
     elif board.total_squares <= 64:
         # Medium board
         return [1, 6, 2, 6, 1, 6, 2, 6, 1, 6, 2, 6]
-    else:
+    elif board.total_squares <= 256:
         # Large board
         return [1, 6, 2, 6, 1, 6, 2, 6, 1, 6, 2, 6, 1, 6, 2, 6]
+    else:
+        # Very large board - use longer but still reasonable sequence
+        return [1, 6, 2, 6, 1, 6, 2, 6, 1, 6, 2, 6, 1, 6, 2, 6, 1, 6, 2, 6]
 
 
 def create_winning_sequence(board: Board) -> List[int]:
