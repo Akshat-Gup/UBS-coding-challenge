@@ -1,0 +1,27 @@
+const express = require('express');
+const app = express();
+const port = process.env.PORT || 3000;
+
+        const triviaAnswers = {
+answers: [
+        4,
+        1,
+        2,
+        2,
+        3,
+        4,
+        1,
+        4,
+        1
+        ]
+        };
+
+// GET endpoint for trivia answers
+        app.get('/trivia', (req, res) => {
+        res.json(triviaAnswers);
+});
+
+// Start the server
+        app.listen(port, () => {
+        console.log(`Server running on port ${port}`);
+        });
