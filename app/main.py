@@ -148,13 +148,16 @@ async def the_ink_archive_get():
                 [1.3, 1.25, 1.1, 0]
             ]
         },
-        "expected_output_format": {
-            "path": [
-                ["Good1", "Good2", "Good3", "Good1"],
-                ["Good4", "Good1", "Good2", "Good4"]
-            ],
-            "gain": 1880
-        }
+        "expected_output_format": [
+            {
+                "path": ["Good1", "Good2", "Good3", "Good1"],
+                "gain": 0
+            },
+            {
+                "path": ["Good4", "Good1", "Good2", "Good4"],
+                "gain": 1880
+            }
+        ]
     }
 
 
