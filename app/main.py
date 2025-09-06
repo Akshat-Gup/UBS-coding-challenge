@@ -170,19 +170,8 @@ async def the_ink_archive_endpoint(request: Request, payload: Union[dict, list] 
         raise HTTPException(status_code=415, detail="Content-Type must be application/json")
 
     try:
-        # Handle both possible input formats
-        if isinstance(payload, list):
-            # If payload is a list, assume it's the rates and create default goods
-            processed_payload = {
-                "goods": ["Blue Moss", "Amberback Shells", "Kelp Silk", "Ventspice"],
-                "rates": payload
-            }
-        elif isinstance(payload, dict):
-            processed_payload = payload
-        else:
-            raise ValueError("Payload must be a dict with goods/rates or a list of rates")
-            
-        result = the_ink_archive(processed_payload)
+        # Pass payload directly to the updated function which handles all formats
+        result = the_ink_archive(payload)
         return JSONResponse(content=result)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))

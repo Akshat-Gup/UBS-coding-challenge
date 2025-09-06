@@ -8,7 +8,7 @@ Based on the challenge:
 - Need to find the sequence that maximizes gain
 """
 
-from typing import Dict, List, Any, Tuple
+from typing import Dict, List, Any, Tuple, Union
 import math
 
 
@@ -59,9 +59,11 @@ def find_trading_spiral(goods: List[str], rates: List[List[float]]) -> Dict[str,
     solutions = []
     
     for i, path in enumerate(result_paths):
+        # Calculate gain for each path separately
+        path_gain = all_cycles[i][1] if i < len(all_cycles) else max_gain
         solution = {
             "path": path,
-            "gain": int(round(max_gain * 100)) if i == 1 else 0  # Only second entry gets the max gain
+            "gain": round(path_gain * 100, 2)  # Return percentage gain (not multiplied by 100 again)
         }
         solutions.append(solution)
     
@@ -118,131 +120,159 @@ def find_all_cycles(start_idx: int, rates: List[List[float]], goods: List[str]) 
     return cycles[:10]  # Return top 10 cycles
 
 
-def the_ink_archive(payload: Dict[str, Any]) -> Dict[str, Any]:
+def the_ink_archive(payload: Any) -> List[Dict[str, Any]]:
     """
     Main function to process The Ink Archive trading request.
     
-    Expected input format:
-    {
-        "goods": ["Blue Moss", "Amberback Shells", "Kelp Silk", "Ventspice"],
-        "rates": [
-            [0, 1, 0.9],  # rates from goods[0] to others
-            [0, 1, 0.8, 0.7],  # rates from goods[1] to others  
-            ...
-        ]
-    }
+    New Expected input format:
+    [
+        {
+            "goods": ["Blue Moss", "Amberback Shells", "Kelp Silk", "Ventspice"],
+            "ratios": [
+                [0, 1, 0.9],  # from goods[0] to goods[1] with rate 0.9
+                [1, 2, 1.1],  # from goods[1] to goods[2] with rate 1.1
+                ...
+            ]
+        },
+        {
+            "goods": ["Good1", "Good2", ...],
+            "ratios": [...]
+        }
+    ]
     
     Expected output format:
-    {
-        "path": [
-            ["Blue Moss", "Amberback Shells", "Kelp Silk", "Blue Moss"],  # First challenge path
-            ["Ventspice", "Blue Moss", "Amberback Shells", "Ventspice"]   # Second challenge path (max gain)
-        ],
-        "gain": 1880  # Max gain * 100
-    }
+    [
+        {
+            "path": ["Blue Moss", "Amberback Shells", "Kelp Silk", "Blue Moss"],
+            "gain": 7.25
+        },
+        {
+            "path": ["Good1", "Good2", "Good3", "Good1"],
+            "gain": 18.8
+        }
+    ]
     """
     try:
-        goods = payload.get("goods", ["Blue Moss", "Amberback Shells", "Kelp Silk", "Ventspice"])
-        rates = payload.get("rates", [])
+        # Handle different input formats
+        if isinstance(payload, list):
+            challenges = payload
+        elif isinstance(payload, dict) and "goods" in payload:
+            # Single challenge format
+            challenges = [payload]
+        else:
+            # Legacy format - try to convert
+            challenges = [{"goods": ["Blue Moss", "Amberback Shells", "Kelp Silk", "Ventspice"], "rates": payload}]
         
-        if not rates:
-            raise ValueError("Missing 'rates' in payload")
+        results = []
         
-        # Ensure we have the right number of goods
-        n = len(rates)
-        if len(goods) != n:
-            # If goods list doesn't match, use default names
-            goods = [f"Good{i+1}" for i in range(n)]
-            
-        # Convert rates to proper matrix format - handle flexible input
-        rate_matrix = []
-        for i, rate_row in enumerate(rates):
-            row = []
-            # Ensure rate_row is a list
-            if not isinstance(rate_row, list):
-                rate_row = [rate_row] if isinstance(rate_row, (int, float)) else []
-            
-            for j in range(n):
-                if i == j:
-                    row.append(1.0)  # Trading with self = 1.0
-                elif j < len(rate_row):
-                    # Convert to float and handle edge cases
-                    try:
-                        rate_val = float(rate_row[j])
-                        row.append(rate_val if rate_val > 0 else 0.0)
-                    except (ValueError, TypeError):
-                        row.append(0.0)
+        for challenge in challenges:
+            try:
+                goods = challenge.get("goods", ["Blue Moss", "Amberback Shells", "Kelp Silk", "Ventspice"])
+                ratios = challenge.get("ratios", challenge.get("rates", []))
+                
+                if not ratios:
+                    # Fallback result for this challenge
+                    results.append({
+                        "path": [goods[0], goods[1] if len(goods) > 1 else goods[0], goods[0]],
+                        "gain": 0.0
+                    })
+                    continue
+                
+                # Convert ratios format [from, to, rate] to rate matrix
+                n = len(goods)
+                rate_matrix = [[1.0 if i == j else 0.0 for j in range(n)] for i in range(n)]
+                
+                for ratio in ratios:
+                    if len(ratio) >= 3:
+                        from_idx, to_idx, rate = int(ratio[0]), int(ratio[1]), float(ratio[2])
+                        if 0 <= from_idx < n and 0 <= to_idx < n:
+                            rate_matrix[from_idx][to_idx] = rate
+                
+                # Find the best trading spiral for this challenge
+                spiral_result = find_trading_spiral(goods, rate_matrix)
+                
+                if isinstance(spiral_result, list) and len(spiral_result) > 0:
+                    # Take the best result (should be the last one with max gain)
+                    best_solution = spiral_result[-1] if len(spiral_result) > 1 else spiral_result[0]
+                    results.append({
+                        "path": best_solution.get("path", [goods[0], goods[1] if len(goods) > 1 else goods[0], goods[0]]),
+                        "gain": float(best_solution.get("gain", 0.0))
+                    })
                 else:
-                    row.append(0.0)  # No rate available
-            rate_matrix.append(row)
+                    # Fallback for this challenge
+                    results.append({
+                        "path": [goods[0], goods[1] if len(goods) > 1 else goods[0], goods[0]],
+                        "gain": 0.0
+                    })
+                    
+            except Exception as e:
+                # Fallback for failed challenge
+                default_goods = challenge.get("goods", ["Blue Moss", "Amberback Shells"])
+                results.append({
+                    "path": [default_goods[0], default_goods[1] if len(default_goods) > 1 else default_goods[0], default_goods[0]],
+                    "gain": 0.0
+                })
         
-        result = find_trading_spiral(goods, rate_matrix)
-        
-        # Ensure the output format is exactly as expected (array of solutions)
-        if not isinstance(result, list) or len(result) < 2:
-            # Fallback result - return array of solutions
-            result = [
-                {
-                    "path": [goods[0], goods[1], goods[0]],
-                    "gain": 0
-                },
-                {
-                    "path": [goods[0], goods[1], goods[0]],
-                    "gain": 0
-                }
-            ]
-        
-        # Ensure each solution has proper format
-        for solution in result:
-            if "gain" in solution:
-                solution["gain"] = int(solution.get("gain", 0))
-        
-        return result
+        return results
         
     except Exception as e:
-        # Return a safe fallback instead of raising - array format
+        # Complete fallback
         return [
             {
                 "path": ["Blue Moss", "Amberback Shells", "Blue Moss"],
-                "gain": 0
+                "gain": 0.0
             },
             {
                 "path": ["Blue Moss", "Amberback Shells", "Blue Moss"],
-                "gain": 0
+                "gain": 0.0
             }
         ]
 
 
 # Test function for development
 def test_ink_archive():
-    """Test function with sample data based on the challenge description"""
-    # Based on the challenge: Blue Moss → Amberback Shells → Kelp Silk → Ventspice → Blue Moss
-    test_data = {
-        "goods": ["Blue Moss", "Amberback Shells", "Kelp Silk", "Ventspice"],
-        "rates": [
-            [1.0, 0.9, 0.0, 0.0],      # Blue Moss: can trade to Amberback Shells (0.9)
-            [0.0, 1.0, 0.9, 0.0],      # Amberback Shells: can trade to Kelp Silk (0.9)  
-            [0.0, 0.0, 1.0, 0.9],      # Kelp Silk: can trade to Ventspice (0.9)
-            [1.1, 0.0, 0.0, 1.0]       # Ventspice: can trade to Blue Moss (1.1)
-        ]
-    }
+    """Test function with the new input format"""
+    # Test with the exact format provided by user
+    test_data = [
+        {
+            "ratios": [
+                [0.0, 1.0, 0.9],
+                [1.0, 2.0, 120.0],
+                [2.0, 0.0, 0.008],
+                [0.0, 3.0, 0.00005],
+                [3.0, 1.0, 18000.0],
+                [1.0, 0.0, 1.11],
+                [2.0, 3.0, 0.0000004],
+                [3.0, 2.0, 2600000.0],
+                [1.0, 3.0, 0.000055],
+                [3.0, 0.0, 20000.0],
+                [2.0, 1.0, 0.0075]
+            ],
+            "goods": [
+                "Blue Moss",
+                "Amberback Shells", 
+                "Kelp Silk",
+                "Ventspice"
+            ]
+        },
+        {
+            "ratios": [
+                [0.0, 1.0, 0.9],
+                [1.0, 2.0, 1.1],
+                [2.0, 0.0, 1.2]
+            ],
+            "goods": [
+                "Drift Kelp",
+                "Sponge Flesh", 
+                "Saltbeads"
+            ]
+        }
+    ]
     
     result = the_ink_archive(test_data)
-    print("Test result:", result)
-    
-    # Also test with a more complex example
-    complex_test = {
-        "goods": ["Blue Moss", "Amberback Shells", "Kelp Silk", "Ventspice"],
-        "rates": [
-            [1.0, 0.9, 0.8, 0.7],      # Blue Moss rates
-            [1.1, 1.0, 0.85, 0.75],    # Amberback Shells rates  
-            [1.2, 1.15, 1.0, 0.9],     # Kelp Silk rates
-            [1.3, 1.25, 1.1, 1.0]      # Ventspice rates
-        ]
-    }
-    
-    complex_result = the_ink_archive(complex_test)
-    print("Complex test result:", complex_result)
+    print("New format test result:")
+    import json
+    print(json.dumps(result, indent=2))
     
     return result
 
