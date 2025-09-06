@@ -45,7 +45,7 @@ def merge_bookings(intervals: List[List[int]]) -> List[List[int]]:
             merged.append([start, end])
 
     # Sort final merged intervals by end time ascending (tie-break by start)
-    # merged.sort(key=lambda x: (x[1], x[0]))
+    merged.sort(key=lambda x: (x[1], x[0]))
     return merged
 
 
